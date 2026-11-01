@@ -22,6 +22,8 @@
   --coral: #b3321f;
   --coral-tint: #fbe1db;
   --coral-line: #e08a7a;
+  --ok: #1fa65a;
+  --ok-ink: #ffffff;
   --shadow: 0 1px 0 rgba(20, 35, 31, .04), 0 10px 26px -14px rgba(20, 35, 31, .28);
   --radius: 20px;
   --tabbar-h: 66px;
@@ -46,6 +48,8 @@
     --coral: #ff8a73;
     --coral-tint: #3a1b16;
     --coral-line: #8a4337;
+    --ok: #3ddc84;
+    --ok-ink: #04230f;
     --shadow: none;
   }
 }
@@ -140,9 +144,9 @@ main { flex: 1; padding: 6px 18px calc(var(--tabbar-h) + var(--safe-b) + 28px); 
 .cell-dot svg { width: 24px; height: 24px; stroke-width: 3; opacity: 0; transform: scale(.4); transition: opacity .2s .05s, transform .25s .05s; }
 .cell-time { font-weight: 720; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .cell-sub { font-size: .75rem; color: var(--muted); min-height: 1.1em; font-variant-numeric: tabular-nums; }
-.cell.taken .cell-dot { background: var(--brand); border-color: var(--brand); }
+.cell.taken .cell-dot { background: var(--ok); border-color: var(--ok); color: var(--ok-ink); box-shadow: 0 0 0 5px color-mix(in srgb, var(--ok) 18%, transparent); }
 .cell.taken .cell-dot svg { opacity: 1; transform: none; }
-.cell.taken .cell-sub { color: var(--brand); font-weight: 650; }
+.cell.taken .cell-sub { color: var(--ok); font-weight: 650; }
 .cell.due .cell-dot { border-color: var(--amber-line); background: var(--amber-tint); color: var(--amber); animation: breathe 2s ease-in-out infinite; }
 .cell.due .cell-dot svg, .cell.late .cell-dot svg { opacity: 1; transform: none; stroke-width: 2.4; }
 .cell.due .cell-sub { color: var(--amber); font-weight: 700; }

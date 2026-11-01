@@ -8,7 +8,7 @@
      2. Recebe os lembretes (Web Push) e mostra a notificação.
      3. Ao tocar na notificação, abre o app já pedindo para registrar a dose.
    ========================================================================== */
-const BUILD = "d0ade38867";
+const BUILD = "a08179e60d";
 const CACHE = `tomei-${BUILD}`;
 const PRECACHE = [
   "./",
