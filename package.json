@@ -1,0 +1,23 @@
+{
+  "name": "tomei",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tomei — registre na hora cada remédio que tomou. PWA offline-first com Supabase.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && node scripts/serve.mjs",
+    "test": "npm run test:unit && npm run test:browser",
+    "test:unit": "node --test test/due.test.mjs test/webpush.test.mjs test/handler.test.mjs test/logic.test.mjs && python3 test/verify_push.py",
+    "test:browser": "node --test --test-concurrency=1 test/browser_sync.test.mjs test/e2e.test.mjs test/pages_subpath.test.mjs",
+    "test:sql": "bash test/run_sql_tests.sh",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
