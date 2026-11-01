@@ -22,7 +22,15 @@ export function matchSlots(times, intakes, day) {
   const slots = normalizeTimes(times).map((time) => ({ time, at: slotDate(day, time), intake: null }));
   const extras = [];
   const sorted = [...intakes].sort((a, b) => tsMs(a.taken_at) - tsMs(b.taken_at));
+  // 1) doses marcadas direto na bolinha de um horário ficam naquele horário
+  const loose = [];
   for (const it of sorted) {
+    const own = it.slot ? slots.find((s) => s.time === it.slot && !s.intake) : null;
+    if (own) own.intake = it;
+    else loose.push(it);
+  }
+  // 2) as demais vão para o horário livre mais próximo
+  for (const it of loose) {
     const t = tsMs(it.taken_at);
     let best = null;
     for (const s of slots) {

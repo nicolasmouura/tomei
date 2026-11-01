@@ -123,9 +123,9 @@ const field = (label, input, hint) =>
 //  Ações
 // =============================================================================
 /** "Tomei agora": grava no aparelho NA HORA com o instante exato do toque. */
-async function take(med, { at } = {}) {
+async function take(med, { at, slot } = {}) {
   const now = new Date();
-  if (!at) {
+  if (!at && !slot) {
     const last = S.intakes
       .filter((i) => i.medication_id === med.id && !i.deleted_at)
       .sort((a, b) => tsMs(b.taken_at) - tsMs(a.taken_at))[0];
@@ -140,7 +140,7 @@ async function take(med, { at } = {}) {
     }
   }
   try {
-    const row = await S.store.logIntake({ medicationId: med.id, takenAt: at ?? new Date() });
+    const row = await S.store.logIntake({ medicationId: med.id, takenAt: at ?? new Date(), slot });
     S.justTaken = row.id;
     setTimeout(() => { S.justTaken = null; }, 1200);
     navigator.vibrate?.(25);
@@ -180,7 +180,7 @@ function handleLaunchUrl(href) {
 }
 
 // =============================================================================
-//  Gavetas: remédio, "tomei em outro horário", editar registro
+//  Gavetas: remédio, editar registro
 // =============================================================================
 function openMedSheet(med) {
   const startDays = normalizeWeekdays(med?.weekdays?.length ? med.weekdays : ALL_DAYS);
@@ -292,33 +292,6 @@ function openMedSheet(med) {
   });
 }
 
-function openTakeAtSheet(med) {
-  const max = toLocalInput(new Date());
-  const when = h("input", { class: "input", id: "f-when", type: "datetime-local", value: max, max });
-  const note = h("input", { class: "input", id: "f-note", placeholder: "opcional", maxLength: 1000 });
-  const err = h("p", { class: "error", role: "alert" });
-  return openSheet(`${med.name}: outro horário`, (close) =>
-    h("form", {
-      class: "form",
-      onsubmit: async (e) => {
-        e.preventDefault();
-        const d = new Date(when.value);
-        if (Number.isNaN(d.getTime())) { err.textContent = "Escolha a data e a hora."; return; }
-        try {
-          const row = await S.store.logIntake({ medicationId: med.id, takenAt: d, note: note.value });
-          close();
-          toast(`${med.name} registrado às ${hhmm(new Date(row.taken_at))}`, { action: { label: "Desfazer", run: () => undoIntake(row.id) }, ms: 7000 });
-          closeNotificationsFor(med.id);
-        } catch (ex) { err.textContent = ex.message; }
-      },
-    },
-    h("p", { class: "hint" }, "Use quando você tomou antes e esqueceu de marcar. Para marcar agora, use o botão “Tomei agora”."),
-    field("Quando você tomou?", when),
-    field("Observação", note),
-    err,
-    h("button", { class: "btn btn-primary btn-block", type: "submit" }, "Registrar")));
-}
-
 function openIntakeSheet(row) {
   const d = new Date(tsMs(row.taken_at));
   const when = h("input", { class: "input", id: "f-when", type: "datetime-local", value: toLocalInput(d), max: toLocalInput(new Date()) });
@@ -381,7 +354,7 @@ function lastLine(last, now) {
   return `Última dose: ${n} dias atrás`;
 }
 
-function cell(slot, now) {
+function cell(slot, now, med) {
   const took = slot.intake ? new Date(tsMs(slot.intake.taken_at)) : null;
   const sub = {
     taken: `às ${took ? hhmm(took) : ""}`,
@@ -397,10 +370,15 @@ function cell(slot, now) {
   }[slot.status];
   const fresh = slot.intake && slot.intake.id === S.justTaken;
   const glyph = { taken: "check", due: "clock", late: "alert" }[slot.status];
-  return h("div", { class: `cell ${slot.status}${fresh ? " just" : ""}`, role: "group", "aria-label": label },
+  const inner = [
     h("div", { class: "cell-dot" }, glyph ? icon(glyph) : null),
     h("span", { class: "cell-time" }, slot.time),
-    h("span", { class: "cell-sub" }, sub));
+    h("span", { class: "cell-sub" }, sub),
+  ];
+  const cls = `cell ${slot.status}${fresh ? " just" : ""}`;
+  if (slot.status === "taken") return h("div", { class: cls, role: "group", "aria-label": label }, inner);
+  // ainda não tomado: tocar na bolinha marca ESTE horário como tomado agora (vale para atrasado também)
+  return h("button", { class: cls, type: "button", "aria-label": `${label}. Toque para marcar como tomado`, onclick: () => take(med, { slot: slot.time }) }, inner);
 }
 
 function medCard({ med, slots, extras, scheduledToday, last }) {
@@ -408,7 +386,7 @@ function medCard({ med, slots, extras, scheduledToday, last }) {
   return h("article", { class: "med", "aria-label": med.name },
     h("div", { class: "med-head" }, h("h3", {}, med.name), med.dose ? h("span", { class: "dose" }, med.dose) : null),
     h("p", { class: "last" }, lastLine(last, now)),
-    slots.length ? h("div", { class: "cells" }, slots.map((s) => cell(s, now))) : null,
+    slots.length ? h("div", { class: "cells" }, slots.map((s) => cell(s, now, med))) : null,
     !scheduledToday && med.times?.length
       ? h("p", { class: "extra" }, `Hoje não é dia deste remédio · ${weekdaysLabel(med.weekdays)}`)
       : null,
@@ -416,8 +394,8 @@ function medCard({ med, slots, extras, scheduledToday, last }) {
       ? h("p", { class: "extra" }, slots.length ? "Dose extra às " : "Hoje: ",
         extras.map((e) => hhmm(new Date(tsMs(e.taken_at)))).join(", "))
       : null,
-    h("button", { class: "btn btn-take", type: "button", onclick: () => take(med) }, icon("capsule"), "Tomei agora"),
-    h("button", { class: "link", type: "button", onclick: () => openTakeAtSheet(med) }, "Tomei em outro horário"));
+    slots.length ? h("p", { class: "hint tap-hint" }, "Toque na bolinha do horário para marcar como tomado.") : null,
+    h("button", { class: "btn btn-take", type: "button", onclick: () => take(med) }, icon("capsule"), "Tomei agora"));
 }
 
 function summaryLine(t) {

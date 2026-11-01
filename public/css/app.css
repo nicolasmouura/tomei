@@ -135,6 +135,9 @@ main { flex: 1; padding: 6px 18px calc(var(--tabbar-h) + var(--safe-b) + 28px); 
 .cells { display: flex; gap: 6px; margin: 16px -4px 4px; padding: 2px 4px 6px; overflow-x: auto; scrollbar-width: none; }
 .cells::-webkit-scrollbar { display: none; }
 .cell { display: grid; justify-items: center; gap: 5px; min-width: 70px; padding: 4px 2px; text-align: center; }
+button.cell { background: none; border: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 14px; }
+button.cell:active { transform: scale(.96); }
+.tap-hint { margin: 2px 0 10px; font-size: .8rem; }
 .cell-dot {
   width: 48px; height: 48px; border-radius: 50%;
   border: 2.5px solid var(--line); background: transparent;

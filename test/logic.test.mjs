@@ -159,3 +159,22 @@ test("buildToday: sem weekdays (remédio antigo) vale todo dia", () => {
     assert.equal(t.items[0].slots.length, 2);
   }
 });
+
+test("matchSlots: dose marcada na bolinha fica no horário escolhido, mesmo que o outro esteja mais perto", () => {
+  // 12:55 está mais perto de 12:00, mas a pessoa tocou na bolinha das 08:00
+  const list = [intake("a", "m1", "2026-11-01T12:55:00-03:00", { slot: "08:00" })];
+  const { slots, extras } = matchSlots(["08:00", "12:00"], list, NOW);
+  assert.equal(slots[0].intake.id, "a");
+  assert.equal(slots[1].intake, null);
+  assert.equal(extras.length, 0);
+});
+
+test("matchSlots: dose com horário já ocupado cai no mais próximo livre", () => {
+  const list = [
+    intake("a", "m1", "2026-11-01T08:05:00-03:00", { slot: "08:00" }),
+    intake("b", "m1", "2026-11-01T08:10:00-03:00", { slot: "08:00" }),
+  ];
+  const { slots } = matchSlots(["08:00", "12:00"], list, NOW);
+  assert.equal(slots[0].intake.id, "a");
+  assert.equal(slots[1].intake.id, "b");
+});

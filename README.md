@@ -4,7 +4,7 @@ App para **marcar na hora cada remédio que você tomou** e nunca mais ficar na 
 ("será que eu já tomei?"). PWA (instala na tela inicial, abre sem internet), com
 **sincronização** pelo Supabase e **lembretes** por notificação.
 
-- Um toque em **Tomei agora** grava o remédio com o horário exato.
+- Um toque em **Tomei agora** grava o remédio com o horário exato. Também dá para **tocar na bolinha de um horário** (inclusive atrasado): ele vira o check verde e a hora em que você tomou aparece embaixo.
 - A tela **Hoje** mostra cada horário como uma "cavidade de cartela": vazia (por vir),
   âmbar (agora), coral (atrasado) ou preenchida (tomado, com a hora).
 - Cada remédio tem seus **horários** e os **dias da semana** em que vale (padrão: todos os dias;
@@ -107,7 +107,7 @@ public/               app (HTML/CSS/JS) — é isto que vai para o host
   js/                 db · remote · sync · store · push · logic · util · app
   sw.js               service worker (gerado pelo build)
 supabase/
-  migrations/         01 esquema+RLS+auditoria · 02 cron · 03 dias da semana
+  migrations/         01 esquema+RLS+auditoria · 02 cron · 03 dias da semana · 04 horário da dose
   functions/send-reminders/   index · handler · due · messages · webpush
 scripts/              build.mjs (gera sw.js) · make_icons.mjs · serve.mjs
 test/                 testes (veja abaixo)
@@ -140,7 +140,7 @@ as proteções de dados foram validadas com **teste de mutação** (quebrar a re
 
 ### Usar em outro projeto Supabase
 
-1. Rode `supabase/migrations/*.sql` em ordem no SQL Editor (a 2ª tem a URL do projeto no começo: troque; a 3ª acrescenta os dias da semana).
+1. Rode `supabase/migrations/*.sql` em ordem no SQL Editor (a 2ª tem a URL do projeto no começo: troque; a 3ª acrescenta os dias da semana e a 4ª o horário da dose).
 2. Publique `supabase/functions/send-reminders` (`supabase functions deploy send-reminders --no-verify-jwt`).
 3. Troque URL e chave *publishable* em `public/config.js` (ou defina `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` no host e rode `npm run build`).
 

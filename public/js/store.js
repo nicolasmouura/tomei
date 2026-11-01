@@ -6,7 +6,7 @@
 //  no disco do aparelho. Nenhuma operação apaga linha: "excluir" é marcar
 //  deleted_at / archived_at (e isso também é sincronizado).
 // =============================================================================
-import { uuid, normalizeTimes, normalizeWeekdays, ALL_DAYS } from "./util.js";
+import { uuid, normalizeTimes, normalizeWeekdays, ALL_DAYS, HHMM } from "./util.js";
 import { stripLocal } from "./model.js";
 
 /** Tolerância para relógio do aparelho adiantado ao registrar "agora". */
@@ -59,7 +59,7 @@ export function createStore({ db, userId, onChange = () => {}, syncSoon = () => 
     },
 
     /** Registra uma dose. Sem `takenAt`, usa o instante exato deste momento. */
-    async logIntake({ medicationId, takenAt = now(), note = "" }) {
+    async logIntake({ medicationId, takenAt = now(), note = "", slot = null }) {
       const med = await db.get("medications", medicationId);
       if (!med) throw new Error("Remédio não encontrado.");
       if (takenAt.getTime() > now().getTime() + FUTURE_SLACK_MS) {
@@ -73,6 +73,7 @@ export function createStore({ db, userId, onChange = () => {}, syncSoon = () => 
         med_dose: med.dose ?? "",
         taken_at: takenAt.toISOString(),
         note: String(note).trim(),
+        slot: slot && HHMM.test(slot) ? slot : null,
         deleted_at: null,
         created_at: now().toISOString(),
         updated_at: null,

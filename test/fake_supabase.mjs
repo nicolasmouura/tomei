@@ -270,6 +270,7 @@ export function createFakeSupabase(opts = {}) {
               (!Array.isArray(row.weekdays) || row.weekdays.length < 1 || row.weekdays.length > 7 || row.weekdays.some((d) => !Number.isInteger(d) || d < 0 || d > 6))) {
             return send(400, { code: "23514", message: 'new row violates check constraint "medications_weekdays_check"' });
           }
+          if (table === "intakes" && row.slot != null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.slot)) return send(400, { code: "23514", message: 'new row violates check constraint "intakes_slot_check"' });
           if (table === "intakes") {
             const med = staged.find((r) => false) ?? state.tables.medications.find((m) => m.id === row.medication_id && m.user_id === row.user_id);
             if (!med) return send(409, { code: "23503", message: 'insert or update on table "intakes" violates foreign key constraint "intakes_medication_fk"' });

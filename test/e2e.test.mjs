@@ -133,7 +133,7 @@ test("login: senha errada mostra o erro em português; a certa leva para a tela 
   } finally { await a.close(); }
 });
 
-test("fluxo principal: cadastrar → Tomei agora → duplicata → desfazer → outro horário → nuvem", async () => {
+test("fluxo principal: cadastrar → Tomei agora → duplicata → desfazer → bolinha do horário → nuvem", async () => {
   const a = await app();
   try {
     await a.open();
@@ -170,16 +170,34 @@ test("fluxo principal: cadastrar → Tomei agora → duplicata → desfazer → 
     await toastLocator(a.page, "Registro desfeito").getByRole("button", { name: "Refazer" }).click();
     await waitFor(async () => (await a.page.locator(".timeline .entry").count()) === 2, "refeito");
 
-    // 5) tomei em outro horário (1 h atrás)
-    await card.getByRole("button", { name: "Tomei em outro horário" }).click();
-    const earlier = await a.page.evaluate(async () => (await import("/js/util.js")).toLocalInput(new Date(Date.now() - 3600_000)));
-    await a.page.getByLabel("Quando você tomou?").fill(earlier);
-    await a.page.getByLabel("Observação").fill("depois do almoço");
-    await a.page.getByRole("button", { name: "Registrar" }).click();
-    await waitFor(async () => (await a.page.locator(".timeline .entry").count()) === 3, "3 registros");
     await a.synced();
-    assert.equal(a.fake.table("intakes").filter((i) => !i.deleted_at).length, 3);
-    assert.ok(a.fake.table("intakes").some((i) => i.note === "depois do almoço"));
+    assert.equal(a.fake.table("intakes").filter((i) => !i.deleted_at).length, 2);
+    assert.deepEqual(a.problems, []);
+  } finally { await a.close(); }
+});
+
+test("tocar na bolinha marca AQUELE horário como tomado (inclusive atrasado) e mostra a hora embaixo", async () => {
+  const a = await app();
+  try {
+    await a.open();
+    await a.login();
+    await a.addMed({ name: "Alketoss", dose: "20mg", times: ["00:01", "23:59"] });
+    const card = a.page.getByRole("article", { name: "Alketoss" });
+    await card.waitFor();
+    // 00:01 já passou (atrasado); 23:59 ainda não chegou
+    const late = card.locator(".cell.late");
+    await late.waitFor();
+    await late.click();
+    await card.locator(".cell.taken").waitFor();
+    assert.equal(await card.locator(".cell.taken .cell-time").innerText(), "00:01");
+    assert.match(await card.locator(".cell.taken .cell-sub").innerText(), /^às \d{2}:\d{2}$/);
+    assert.equal(await card.locator(".cell.late").count(), 0);
+    await waitFor(() => a.fake.table("intakes").some((i) => i.slot === "00:01"), "dose com horário chegou ao servidor");
+    // marcar o 23:59 adiantado também vale para o horário certo
+    await card.locator(".cell.upcoming").click();
+    await waitFor(async () => (await card.locator(".cell.taken").count()) === 2, "os dois horários tomados");
+    assert.deepEqual((await card.locator(".cell.taken .cell-time").allInnerTexts()).sort(), ["00:01", "23:59"]);
+    await a.synced();
     assert.deepEqual(a.problems, []);
   } finally { await a.close(); }
 });

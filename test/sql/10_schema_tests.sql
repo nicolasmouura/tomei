@@ -260,6 +260,16 @@ select pg_temp.chk('tomei_cron_ok: null = false',
 select pg_temp.chk('tomei_cron_ok: login comum não pode chamar (42501)',
   pg_temp.val('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'authenticated', $q$select public.tomei_cron_ok('x')::text$q$) = 'ERR:42501');
 
+-- ---- horário da cartela (slot) em doses ----
+select pg_temp.chk('dose com slot válido é aceita',
+  pg_temp.run('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'authenticated',
+    $q$insert into public.intakes (id, medication_id, med_name, taken_at, slot)
+       values ('99999999-9999-9999-9999-999999999991', '11111111-1111-1111-1111-111111111111', 'X', now(), '08:00')$q$) = 'OK:1');
+select pg_temp.chk('dose com slot inválido é recusada (23514)',
+  pg_temp.run('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'authenticated',
+    $q$insert into public.intakes (id, medication_id, med_name, taken_at, slot)
+       values ('99999999-9999-9999-9999-999999999992', '11111111-1111-1111-1111-111111111111', 'X', now(), '25:00')$q$) like 'ERR:23514%');
+
 select n, test, ok from _t order by n;
 
 rollback;
