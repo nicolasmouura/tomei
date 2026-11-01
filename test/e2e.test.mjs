@@ -299,7 +299,7 @@ test("OFFLINE de verdade: registra sem internet, fecha e reabre o app sem intern
   } finally { await a.close(); }
 });
 
-test("histórico, edição e remoção; remédios: arquivar e desarquivar", async () => {
+test("histórico, edição e remoção; remédios: excluir e restaurar", async () => {
   const a = await app();
   try {
     await a.open();
@@ -321,12 +321,12 @@ test("histórico, edição e remoção; remédios: arquivar e desarquivar", asyn
 
     await a.tab("Remédios");
     await a.page.getByRole("button", { name: /Losartana/ }).click();
-    await a.page.getByRole("button", { name: "Arquivar remédio" }).click();
-    await a.page.getByRole("button", { name: "Arquivar", exact: true }).click();
+    await a.page.getByRole("button", { name: "Excluir remédio" }).click();
+    await a.page.getByRole("button", { name: "Excluir", exact: true }).click();
     await a.page.getByText("Nenhum remédio cadastrado ainda.").waitFor();
-    await a.page.getByRole("button", { name: /Ver arquivados/ }).click();
+    await a.page.getByRole("button", { name: /Ver excluídos/ }).click();
     await a.page.getByRole("button", { name: /Losartana/ }).click();
-    await a.page.getByRole("button", { name: "Desarquivar" }).click();
+    await a.page.getByRole("button", { name: "Restaurar remédio" }).click();
     await a.tab("Hoje");
     await a.page.getByRole("article", { name: "Losartana" }).waitFor();
     assert.deepEqual(a.problems, []);

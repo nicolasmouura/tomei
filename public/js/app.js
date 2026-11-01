@@ -295,21 +295,22 @@ function openMedSheet(med) {
     save,
     med
       ? h("button", {
-        class: "btn btn-block", type: "button",
+        class: med.archived_at ? "btn btn-block" : "btn btn-block btn-danger", type: "button",
         onclick: async () => {
           if (!med.archived_at) {
             const ok = await confirmDialog({
-              title: `Arquivar ${med.name}?`,
-              body: "Ele para de aparecer em Hoje e de mandar lembretes. O histórico continua guardado, e dá para desarquivar depois.",
-              confirm: "Arquivar",
+              title: "Tem certeza que deseja excluir esse remédio?",
+              body: `${med.name} para de aparecer em Hoje e de mandar lembretes. Por segurança, as doses já registradas continuam no Histórico, e dá para restaurar o remédio em “Ver excluídos”.`,
+              confirm: "Excluir",
+              danger: true,
             });
             if (!ok) return;
           }
           await S.store.setMedicationArchived(med.id, !med.archived_at);
           close();
-          toast(med.archived_at ? "Remédio desarquivado" : "Remédio arquivado");
+          toast(med.archived_at ? "Remédio restaurado" : "Remédio excluído");
         },
-      }, med.archived_at ? "Desarquivar" : "Arquivar remédio")
+      }, med.archived_at ? "Restaurar remédio" : "Excluir remédio")
       : null);
     setTimeout(() => (med ? null : name.focus()), 60);
     return form;
@@ -507,7 +508,7 @@ function medRow(m) {
   return h("button", { class: "row-card", type: "button", onclick: () => openMedSheet(m) },
     h("h3", {}, m.name, m.dose ? h("span", { class: "dose" }, m.dose) : null),
     h("div", { class: "chips" },
-      m.archived_at ? h("span", { class: "chip plain" }, "Arquivado")
+      m.archived_at ? h("span", { class: "chip plain" }, "Excluído")
         : m.times?.length ? m.times.map((t) => h("span", { class: "chip" }, t))
         : h("span", { class: "chip plain" }, "Sem lembrete"),
       !m.archived_at && m.times?.length && (m.weekdays?.length ?? 7) < 7 ? h("span", { class: "chip plain" }, weekdaysLabel(m.weekdays)) : null,
@@ -524,7 +525,7 @@ function medsView() {
     ...(active.length ? active.map(medRow) : [h("p", { class: "hint" }, "Nenhum remédio cadastrado ainda.")]),
     archived.length
       ? h("button", { class: "link", type: "button", onclick: () => { S.showArchived = !S.showArchived; render(); } },
-        S.showArchived ? "Esconder arquivados" : `Ver arquivados (${archived.length})`)
+        S.showArchived ? "Esconder excluídos" : `Ver excluídos (${archived.length})`)
       : null,
     ...(S.showArchived ? archived.map(medRow) : []),
   ];

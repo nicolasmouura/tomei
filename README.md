@@ -71,7 +71,7 @@ Projeto **`tomei`** (ref `ekyigleiqwkxoxwmyakb`, região São Paulo), criado à 
 | **Fila por linha** | Cada registro tem `_dirty/_rev`. Só vira "enviado" quando o servidor confirma **e** a linha não foi editada no meio do envio. |
 | **Envio idempotente** | O `id` (UUID) nasce no aparelho e o envio é *upsert*. Reenviar 10× não duplica nada. |
 | **Isolamento de erro** | Se o servidor recusar uma linha, só ela fica marcada ("Problema"); as outras sobem. Nada é descartado. |
-| **Nada se apaga** | "Desfazer" = `deleted_at`; "excluir remédio" = arquivar. O app **não tem permissão de DELETE/TRUNCATE** (nem no banco). |
+| **Nada se apaga** | "Desfazer" = `deleted_at`; "excluir remédio" = esconder (as doses ficam no Histórico e dá para restaurar). O app **não tem permissão de DELETE/TRUNCATE** (nem no banco). |
 | **Auditoria** | Toda alteração copia a versão antiga para `private.audit_log` (fora da API). Dá para restaurar o que foi sobrescrito. |
 | **Exportar backup** | Ajustes → `.json` (completo, inclusive desfeitos) e `.csv` (planilha). |
 
