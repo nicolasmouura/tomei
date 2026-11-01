@@ -270,6 +270,11 @@ select pg_temp.chk('dose com slot inválido é recusada (23514)',
     $q$insert into public.intakes (id, medication_id, med_name, taken_at, slot)
        values ('99999999-9999-9999-9999-999999999992', '11111111-1111-1111-1111-111111111111', 'X', now(), '25:00')$q$) like 'ERR:23514%');
 
+select pg_temp.chk('dose com slot_date (dose de ontem marcada na madrugada) é aceita',
+  pg_temp.run('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'authenticated',
+    $q$insert into public.intakes (id, medication_id, med_name, taken_at, slot, slot_date)
+       values ('99999999-9999-9999-9999-999999999993', '11111111-1111-1111-1111-111111111111', 'X', now(), '23:00', current_date - 1)$q$) = 'OK:1');
+
 select n, test, ok from _t order by n;
 
 rollback;

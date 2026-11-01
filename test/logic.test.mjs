@@ -178,3 +178,24 @@ test("matchSlots: dose com horário já ocupado cai no mais próximo livre", () 
   assert.equal(slots[0].intake.id, "a");
   assert.equal(slots[1].intake.id, "b");
 });
+
+test("missedYesterday: lista só o horário de ontem sem registro; slot_date puxa a dose da madrugada para ontem", async () => {
+  const { missedYesterday, buildToday } = await import("../public/js/logic.js");
+  const NOW2 = d("2026-11-02T00:30:00-03:00");
+  const m = med({ id: "m1", times: ["08:00", "23:00"], created_at: "2026-10-01T10:00:00.000Z" });
+  const base = { medications: [m], now: NOW2 };
+  // ontem só tomou às 08:02
+  const taken = [intake("a", "m1", "2026-11-01T08:02:00-03:00")];
+  assert.deepEqual(missedYesterday({ ...base, intakes: taken }).map((x) => x.time), ["23:00"]);
+  // dose marcada às 00:20 de hoje, mas "pertence" ao 23:00 de ontem
+  const late = [...taken, intake("b", "m1", "2026-11-02T00:20:00-03:00", { slot: "23:00", slot_date: "2026-11-01" })];
+  assert.deepEqual(missedYesterday({ ...base, intakes: late }), []);
+  // ... e ela NÃO ocupa horário de hoje
+  const today = buildToday({ medications: [m], intakes: late, now: NOW2 });
+  assert.equal(today.items[0].slots.filter((s) => s.intake).length, 0);
+  // dispensado
+  assert.deepEqual(missedYesterday({ ...base, intakes: taken, dismissed: new Set(["m1|2026-11-01|23:00"]) }), []);
+  // remédio criado hoje não tinha horário ontem; remédio de outros dias da semana não conta
+  assert.deepEqual(missedYesterday({ ...base, intakes: [], medications: [med({ id: "m2", times: ["23:00"], created_at: "2026-11-02T03:10:00.000Z" })] }), []);
+  assert.deepEqual(missedYesterday({ ...base, intakes: [], medications: [med({ id: "m3", times: ["23:00"], weekdays: [1, 2], created_at: "2026-10-01T10:00:00.000Z" })] }), []); // ontem = domingo
+});

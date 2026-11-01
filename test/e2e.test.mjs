@@ -202,6 +202,74 @@ test("tocar na bolinha marca AQUELE horário como tomado (inclusive atrasado) e 
   } finally { await a.close(); }
 });
 
+const seedNight = (fake, uid) => {
+  fake.table("medications").push({
+    id: "55555555-5555-4555-8555-555555555555", user_id: uid, name: "Noturno", dose: "10 mg", notes: "", times: ["23:00"],
+    archived_at: null, created_at: "2026-10-01T10:00:00.000000+00:00", updated_at: "2026-10-01T10:00:00.000001+00:00",
+  });
+};
+const AFTER_MIDNIGHT = "2026-11-02T00:30:00-03:00";
+
+test("virada do dia: 'Ontem ficou faltando' → Tomei registra na dose de ONTEM; 'Não tomei' tira o aviso", async () => {
+  const a = await app({ clockAt: AFTER_MIDNIGHT, seed: seedNight });
+  try {
+    await a.open();
+    await a.login();
+    const box = a.page.locator(".missed");
+    await box.waitFor();
+    assert.match(await box.innerText(), /Noturno/);
+    assert.match(await box.innerText(), /23:00/);
+    await a.page.screenshot({ path: `${SHOTS}light-7-ontem-faltando.png` });
+    await box.getByRole("button", { name: "Tomei", exact: true }).click();
+    await a.page.locator(".missed").waitFor({ state: "detached" });
+    await waitFor(() => a.fake.table("intakes").some((i) => i.slot === "23:00" && i.slot_date === "2026-11-01"), "dose de ontem no servidor");
+    // a dose de ontem NÃO ocupa o horário de hoje
+    const card = a.page.getByRole("article", { name: "Noturno" });
+    assert.equal(await card.locator(".cell.taken").count(), 0);
+    await a.synced();
+    assert.deepEqual(a.problems, []);
+  } finally { await a.close(); }
+
+  const b = await app({ clockAt: AFTER_MIDNIGHT, seed: seedNight });
+  try {
+    await b.open();
+    await b.login();
+    await b.page.locator(".missed").waitFor();
+    await b.page.locator(".missed").getByRole("button", { name: "Não tomei" }).click();
+    await b.page.locator(".missed").waitFor({ state: "detached" });
+    assert.equal(b.fake.table("intakes").length, 0, "'Não tomei' não grava dose nenhuma");
+  } finally { await b.close(); }
+});
+
+test("madrugada: 'Tomei agora' pergunta se é a dose de ontem (sim → ontem; não → hoje)", async () => {
+  const a = await app({ clockAt: AFTER_MIDNIGHT, seed: seedNight });
+  try {
+    await a.open();
+    await a.login();
+    const card = a.page.getByRole("article", { name: "Noturno" });
+    await card.waitFor();
+    await card.getByRole("button", { name: "Tomei agora" }).click();
+    await a.page.getByText("Foi a dose de ontem?").waitFor();
+    await a.page.getByRole("button", { name: "Não, é de hoje" }).click();
+    await waitFor(() => a.fake.table("intakes").length === 1, "registrou");
+    const row = a.fake.table("intakes")[0];
+    assert.equal(row.slot_date ?? null, null, "de hoje: sem slot_date");
+    assert.equal(row.slot ?? null, null);
+  } finally { await a.close(); }
+
+  const b = await app({ clockAt: AFTER_MIDNIGHT, seed: seedNight });
+  try {
+    await b.open();
+    await b.login();
+    const card = b.page.getByRole("article", { name: "Noturno" });
+    await card.waitFor();
+    await card.getByRole("button", { name: "Tomei agora" }).click();
+    await b.page.getByRole("button", { name: "Sim, é a de ontem" }).click();
+    await waitFor(() => b.fake.table("intakes").some((i) => i.slot === "23:00" && i.slot_date === "2026-11-01"), "dose ligada a ontem");
+    await b.page.locator(".missed").waitFor({ state: "detached" });
+  } finally { await b.close(); }
+});
+
 test("OFFLINE de verdade: registra sem internet, fecha e reabre o app sem internet (cache do SW), e sobe ao reconectar", async () => {
   const a = await app();
   try {

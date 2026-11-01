@@ -59,7 +59,7 @@ export function createStore({ db, userId, onChange = () => {}, syncSoon = () => 
     },
 
     /** Registra uma dose. Sem `takenAt`, usa o instante exato deste momento. */
-    async logIntake({ medicationId, takenAt = now(), note = "", slot = null }) {
+    async logIntake({ medicationId, takenAt = now(), note = "", slot = null, slotDate = null }) {
       const med = await db.get("medications", medicationId);
       if (!med) throw new Error("Remédio não encontrado.");
       if (takenAt.getTime() > now().getTime() + FUTURE_SLACK_MS) {
@@ -74,6 +74,7 @@ export function createStore({ db, userId, onChange = () => {}, syncSoon = () => 
         taken_at: takenAt.toISOString(),
         note: String(note).trim(),
         slot: slot && HHMM.test(slot) ? slot : null,
+        slot_date: slot && /^\d{4}-\d{2}-\d{2}$/.test(slotDate ?? "") ? slotDate : null,
         deleted_at: null,
         created_at: now().toISOString(),
         updated_at: null,

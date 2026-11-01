@@ -1,2 +1,2 @@
 // Gerado por scripts/build.mjs — não edite.
-export const BUILD = "7b01f56ea1";
+export const BUILD = "0f42c86dc7";

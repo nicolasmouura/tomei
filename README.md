@@ -9,6 +9,7 @@ App para **marcar na hora cada remédio que você tomou** e nunca mais ficar na 
   âmbar (agora), coral (atrasado) ou preenchida (tomado, com a hora).
 - Cada remédio tem seus **horários** e os **dias da semana** em que vale (padrão: todos os dias;
   dá para marcar, por exemplo, só seg/qua/sex).
+- **Virada do dia:** o que ficou sem marcar ontem aparece em "Ontem ficou faltando" (botões *Tomei* / *Não tomei*). De madrugada (até 3h), "Tomei agora" pergunta se a dose é de ontem.
 - Se a mesma dose foi marcada há menos de 1 h, o app pergunta antes de marcar de novo.
 - Lembretes na hora de cada remédio (só nos dias marcados); se não for registrado, o aviso se repete 15 min depois.
 - Funciona **sem internet**: tudo grava no aparelho primeiro e sobe sozinho quando a conexão volta.
@@ -107,7 +108,7 @@ public/               app (HTML/CSS/JS) — é isto que vai para o host
   js/                 db · remote · sync · store · push · logic · util · app
   sw.js               service worker (gerado pelo build)
 supabase/
-  migrations/         01 esquema+RLS+auditoria · 02 cron · 03 dias da semana · 04 horário da dose
+  migrations/         01 esquema+RLS+auditoria · 02 cron · 03 dias da semana · 04 horário da dose · 05 dia da dose
   functions/send-reminders/   index · handler · due · messages · webpush
 scripts/              build.mjs (gera sw.js) · make_icons.mjs · serve.mjs
 test/                 testes (veja abaixo)
@@ -140,7 +141,7 @@ as proteções de dados foram validadas com **teste de mutação** (quebrar a re
 
 ### Usar em outro projeto Supabase
 
-1. Rode `supabase/migrations/*.sql` em ordem no SQL Editor (a 2ª tem a URL do projeto no começo: troque; a 3ª acrescenta os dias da semana e a 4ª o horário da dose).
+1. Rode `supabase/migrations/*.sql` em ordem no SQL Editor (a 2ª tem a URL do projeto no começo: troque; a 3ª acrescenta os dias da semana e a 4ª e a 5ª o horário e o dia da dose).
 2. Publique `supabase/functions/send-reminders` (`supabase functions deploy send-reminders --no-verify-jwt`).
 3. Troque URL e chave *publishable* em `public/config.js` (ou defina `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` no host e rode `npm run build`).
 

@@ -18,7 +18,7 @@ import { createRemote } from "./remote.js";
 import { createStore } from "./store.js";
 import { createSync, profileStep } from "./sync.js";
 import { createPush, closeNotificationsFor, isIos, isStandalone } from "./push.js";
-import { buildToday, todaysIntakes, groupByDay } from "./logic.js";
+import { buildToday, todaysIntakes, groupByDay, missedYesterday, CARRY_UNTIL_HOUR } from "./logic.js";
 
 /** Se a mesma dose foi registrada há menos que isso, pergunta antes de registrar de novo. */
 const DUPLICATE_WINDOW_MIN = 60;
@@ -67,6 +67,17 @@ const ls = {
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* modo privado */ } },
 };
+
+/** "Não tomei" de ontem: lembrado só neste aparelho (não é dado de saúde, só some o aviso). */
+const DISMISS_KEY = "tomei.dismissedMissed";
+function dismissedSet() {
+  try { return new Set(JSON.parse(ls.get(DISMISS_KEY) || "[]")); } catch { return new Set(); }
+}
+function dismissMissed(key) {
+  const list = [...dismissedSet(), key].slice(-60);
+  ls.set(DISMISS_KEY, JSON.stringify(list));
+}
+const missedNow = (now = new Date()) => missedYesterday({ medications: S.medications, intakes: S.intakes, now, dismissed: dismissedSet() });
 
 // =============================================================================
 //  Peças reutilizáveis: aviso (toast), diálogo de confirmação, gaveta (sheet)
@@ -123,8 +134,21 @@ const field = (label, input, hint) =>
 //  Ações
 // =============================================================================
 /** "Tomei agora": grava no aparelho NA HORA com o instante exato do toque. */
-async function take(med, { at, slot } = {}) {
+async function take(med, { at, slot, slotDate } = {}) {
   const now = new Date();
+  // Madrugada: se ficou faltando um horário de ontem, pergunta se este registro é dele.
+  if (!at && !slot && now.getHours() < CARRY_UNTIL_HOUR) {
+    const pending = missedNow(now).filter((m) => m.med.id === med.id && now - m.at < 6 * 3600_000).pop();
+    if (pending) {
+      const yes = await confirmDialog({
+        title: "Foi a dose de ontem?",
+        body: `${med.name} das ${pending.time} de ontem ainda não foi marcado. Este registro é dessa dose?`,
+        confirm: "Sim, é a de ontem",
+        cancel: "Não, é de hoje",
+      });
+      if (yes) { slot = pending.time; slotDate = pending.date; }
+    }
+  }
   if (!at && !slot) {
     const last = S.intakes
       .filter((i) => i.medication_id === med.id && !i.deleted_at)
@@ -140,7 +164,7 @@ async function take(med, { at, slot } = {}) {
     }
   }
   try {
-    const row = await S.store.logIntake({ medicationId: med.id, takenAt: at ?? new Date(), slot });
+    const row = await S.store.logIntake({ medicationId: med.id, takenAt: at ?? new Date(), slot, slotDate });
     S.justTaken = row.id;
     setTimeout(() => { S.justTaken = null; }, 1200);
     navigator.vibrate?.(25);
@@ -431,13 +455,26 @@ function notices(hasTimes) {
   return out;
 }
 
+function missedCard(list) {
+  return h("section", { class: "notice coral missed" },
+    h("h2", {}, "Ontem ficou faltando"),
+    h("p", {}, now_hint()),
+    ...list.map((m) => h("div", { class: "missed-row" },
+      h("span", { class: "missed-what" }, h("strong", {}, `${m.med.name}${m.med.dose ? ` ${m.med.dose}` : ""}`), ` · ${m.time}`),
+      h("button", { class: "btn", type: "button", onclick: () => take(m.med, { slot: m.time, slotDate: m.date }) }, "Tomei"),
+      h("button", { class: "btn", type: "button", onclick: () => { dismissMissed(`${m.med.id}|${m.date}|${m.time}`); render(); } }, "Não tomei"))));
+}
+const now_hint = () => (new Date().getHours() < CARRY_UNTIL_HOUR ? "Ainda dá tempo: marque se você tomou." : "Marque o que você tomou ou toque em “Não tomei” para tirar daqui.");
+
 function todayView() {
   const now = new Date();
   const t = buildToday({ medications: S.medications, intakes: S.intakes, now });
   const today = todaysIntakes(S.intakes, now);
   const hasTimes = t.items.some((i) => i.slots.length);
+  const missed = missedNow(now);
   return [
     h("section", { class: "hello" }, h("h1", {}, longDayLabel(now)), summaryLine(t)),
+    ...(missed.length ? [missedCard(missed)] : []),
     ...notices(hasTimes),
     ...(t.items.length
       ? t.items.map(medCard)

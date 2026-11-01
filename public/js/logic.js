@@ -65,7 +65,7 @@ export function buildToday({ medications, intakes, now }) {
     const t = tsMs(i.taken_at);
     const prev = lastBy.get(i.medication_id);
     if (!prev || t > tsMs(prev.taken_at)) lastBy.set(i.medication_id, i);
-    if (sameDay(new Date(t), now)) todayBy.set(i.medication_id, [...(todayBy.get(i.medication_id) ?? []), i]);
+    if (intakeDay(i) === dayKey(now)) todayBy.set(i.medication_id, [...(todayBy.get(i.medication_id) ?? []), i]);
   }
 
   const items = medications
@@ -115,4 +115,37 @@ export function groupByDay(intakes, now, days = 14) {
   const all = [...groups.values()].sort((a, b) => (a.key < b.key ? 1 : -1));
   for (const g of all) g.items.sort((a, b) => tsMs(b.taken_at) - tsMs(a.taken_at));
   return { shown: all.slice(0, days), hidden: Math.max(0, all.length - days) };
+}
+
+/** Dia (AAAA-MM-DD) a que a dose pertence: o escolhido na bolinha, ou o dia em que foi tomada. */
+export function intakeDay(it) {
+  return it.slot_date || dayKey(new Date(tsMs(it.taken_at)));
+}
+
+/** A partir de que hora da madrugada "Tomei agora" ainda pergunta se é a dose de ontem. */
+export const CARRY_UNTIL_HOUR = 3;
+
+/**
+ * Horários de ONTEM que ficaram sem registro (ainda não dispensados).
+ * `dismissed`: conjunto de chaves "remédio|dia|HH:MM" que a pessoa marcou como "não tomei".
+ */
+export function missedYesterday({ medications, intakes, now, dismissed = new Set() }) {
+  const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yKey = dayKey(y);
+  const startToday = startOfDay(now).getTime();
+  const out = [];
+  for (const med of medications) {
+    if (med.archived_at || !med.times?.length) continue;
+    if (med.created_at && tsMs(med.created_at) >= startToday) continue; // remédio novo: não tinha horário ontem
+    const days = normalizeWeekdays(med.weekdays?.length ? med.weekdays : ALL_DAYS);
+    if (!days.includes(y.getDay())) continue;
+    const list = intakes.filter((i) => !i.deleted_at && i.medication_id === med.id && intakeDay(i) === yKey);
+    const { slots } = matchSlots(med.times, list, y);
+    for (const s of slots) {
+      if (s.intake) continue;
+      if (dismissed.has(`${med.id}|${yKey}|${s.time}`)) continue;
+      out.push({ med, time: s.time, at: s.at, date: yKey });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
 }

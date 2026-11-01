@@ -7,7 +7,7 @@ import { toIso, ALL_DAYS, normalizeWeekdays } from "./util.js";
 const pick = (o, keys) => Object.fromEntries(keys.map((k) => [k, o[k] ?? null]));
 
 const MED_COLS = ["id", "user_id", "name", "dose", "notes", "times", "weekdays", "archived_at"];
-const INTAKE_COLS = ["id", "user_id", "medication_id", "med_name", "med_dose", "taken_at", "note", "slot", "deleted_at"];
+const INTAKE_COLS = ["id", "user_id", "medication_id", "med_name", "med_dose", "taken_at", "note", "slot", "slot_date", "deleted_at"];
 
 /** Linha local → corpo do upsert (sem campos de controle e sem created_at/updated_at, que são do servidor). */
 export const toRemote = {
@@ -18,7 +18,7 @@ export const toRemote = {
     times: r.times ?? [],
     weekdays: r.weekdays?.length ? normalizeWeekdays(r.weekdays) : ALL_DAYS,
   }),
-  intakes: (r) => ({ ...pick(r, INTAKE_COLS), med_dose: r.med_dose ?? "", note: r.note ?? "", slot: r.slot ?? null }),
+  intakes: (r) => ({ ...pick(r, INTAKE_COLS), med_dose: r.med_dose ?? "", note: r.note ?? "", slot: r.slot ?? null, slot_date: r.slot_date ?? null }),
 };
 
 /** Linha do servidor → linha local (timestamps no formato padrão do JS). */
@@ -44,6 +44,7 @@ export const fromRemote = {
     taken_at: toIso(r.taken_at),
     note: r.note ?? "",
     slot: r.slot ?? null,
+    slot_date: r.slot_date ?? null,
     deleted_at: toIso(r.deleted_at),
     created_at: r.created_at,
     updated_at: r.updated_at,

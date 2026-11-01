@@ -191,6 +191,9 @@ button.cell:active { transform: scale(.96); }
 }
 .notice h2 { font-size: 1rem; }
 .notice p { font-size: .92rem; color: var(--ink); }
+.missed-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.missed-what { flex: 1 1 100%; }
+.missed-row .btn { flex: 1; min-height: 44px; }
 .notice.coral { background: var(--coral-tint); border-color: var(--coral-line); }
 
 /* ---------- listas por dia (hoje / histórico) ---------- */
